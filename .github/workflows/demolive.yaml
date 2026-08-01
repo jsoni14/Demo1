@@ -1,0 +1,72 @@
+name: Build and Deploy My App 
+
+on: push
+
+jobs:
+  lint:
+    name: Lint & Validate Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Check Files Exist
+        run: |
+          echo "Checking project files..."
+          ls -la
+          test -f index.js && echo "index.js found"
+          test -f test.js && echo "test.js found"
+
+  test:
+    name: Run Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Run Application
+        run: node index.js
+      - name: Run Tests
+        run: node test.js
+
+  build:
+    name: Build Application
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Create Build Folder
+        run: |
+          mkdir build
+          cp index.js build/
+          echo "Build completed on $(date)" > build/build-info.txt
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: build/
+
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+      - name: Simulate Deployment
+        run: |
+          echo "Deploying application..."
+          echo "Uploading files to production server..."
+          sleep 2
+          echo "Deployment successful!"
+      - name: Deployment Summary
+        run: echo "Application deployed successfully at $(date)" >> $GITHUB_STEP_SUMMARY
